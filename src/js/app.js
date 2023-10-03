@@ -1,67 +1,89 @@
-let uploadButton = document.getElementById("upload-button");
-let container = document.querySelector(".container");
-let error = document.getElementById("error");
-let imageDisplay = document.getElementById("image-display");
+let currentElement = "";
+let list = document.getElementById("list");
+let initialX = 0,
+  initialY = 0;
 
-const fileHandler = (file, name, type) => {
-  if (type.split("/")[0] !== "image") {
-    // Dosya türü hatası
-    error.innerText = "Lütfen bir resim dosyası yükleyin";
+const isTouchDevice = () => {
+  try {
+    //We try to create TouchEvent (it would fail for desktops and throw error)
+    document.createEvent("TouchEvent");
+    return true;
+  } catch (e) {
     return false;
   }
-  error.innerText = "";
-  let reader = new FileReader();
-  reader.readAsDataURL(file);
-  reader.onloadend = () => {
-    // Resim ve dosya adı
-    let imageContainer = document.createElement("figure");
-    let img = document.createElement("img");
-    img.src = reader.result;
-    imageContainer.appendChild(img);
-    let figcaption = document.createElement("figcaption");
-    figcaption.innerText = name;
-    imageContainer.appendChild(figcaption);
-    imageDisplay.appendChild(imageContainer);
-  };
 };
 
-// Yükleme düğmesi
-uploadButton.addEventListener("change", () => {
-  Array.from(uploadButton.files).forEach((file) => {
-    fileHandler(file, file.name, file.type);
+//Create List Items
+const creator = (count) => {
+  for (let i = 1; i <= count; i++) {
+    list.innerHTML += `<li class="list-item" data-value ="${i}">Item-${i} </li>`;
+  }
+};
+
+//Returns element index with given value
+const getPosition = (value) => {
+  let elementIndex;
+  let listItems = document.querySelectorAll(".list-item");
+  listItems.forEach((element, index) => {
+    let elementValue = element.getAttribute("data-value");
+    if (value == elementValue) {
+      elementIndex = index;
+    }
   });
-});
+  return elementIndex;
+};
 
-container.addEventListener("dragenter", (e) => {
+//Drag and drop functions
+function dragStart(e) {
+  initialX = isTouchDevice() ? e.touches[0].clientX : e.clientX;
+  initialY = isTouchDevice() ? e.touches[0].clientY : e.clientY;
+  //Set current Element
+  currentElement = e.target;
+}
+function dragOver(e) {
   e.preventDefault();
-  e.stopPropagation();
-  container.classList.add("active");
-}, false);
+}
 
-container.addEventListener("dragleave", (e) => {
+const drop = (e) => {
   e.preventDefault();
-  e.stopPropagation();
-  container.classList.remove("active");
-}, false);
+  let newX = isTouchDevice() ? e.touches[0].clientX : e.clientX;
+  let newY = isTouchDevice() ? e.touches[0].clientY : e.clientY;
 
-container.addEventListener("dragover", (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  container.classList.add("active");
-}, false);
+  //Set targetElement(where we drop the picked element).It is based on mouse position
+  let targetElement = document.elementFromPoint(newX, newY);
+  let currentValue = currentElement.getAttribute("data-value");
+  let targetValue = targetElement.getAttribute("data-value");
+  //get index of current and target based on value
+  let [currentPosition, targetPosition] = [
+    getPosition(currentValue),
+    getPosition(targetValue),
+  ];
+  initialX = newX;
+  initialY = newY;
 
-container.addEventListener("drop", (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  container.classList.remove("active");
-  let draggedData = e.dataTransfer;
-  let files = draggedData.files;
+  try {
+    //'afterend' inserts the element after the target element and 'beforebegin' inserts before the target element
+    if (currentPosition < targetPosition) {
+      targetElement.insertAdjacentElement("afterend", currentElement);
+    } else {
+      targetElement.insertAdjacentElement("beforebegin", currentElement);
+    }
+  } catch (err) {}
+};
 
-  Array.from(files).forEach((file) => {
-    fileHandler(file, file.name, file.type);
+window.onload = async () => {
+  customElement = "";
+  list.innerHTML = "";
+  //This creates 5 elements
+  await creator(5);
+
+  let listItems = document.querySelectorAll(".list-item");
+  listItems.forEach((element) => {
+    element.draggable = true;
+    element.addEventListener("dragstart", dragStart, false);
+    element.addEventListener("dragover", dragOver, false);
+    element.addEventListener("drop", drop, false);
+    element.addEventListener("touchstart", dragStart, false);
+    element.addEventListener("touchmove", drop, false);
   });
-}, false);
-
-window.onload = () => {
-  error.innerText = "";
 };
